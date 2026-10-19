@@ -1,0 +1,65 @@
+server:
+  host: 0.0.0.0
+  port: 8080
+  cors:
+    allow_origins: ["*"]
+    allow_methods: ["*"]
+    allow_headers: ["*"]
+
+# Reusable auth providers
+auth_providers:
+  squidex_cms:
+    type: oidc_client_credentials
+    token_url: http://squidex:5000/identity-server/connect/token
+    client_id: ${SQUIDEX_CLIENT_ID}
+    client_secret: ${SQUIDEX_CLIENT_SECRET}
+    scope: squidex-api
+    cache_ttl: 3300  # 55 min
+
+  keycloak_api:
+    type: oidc_client_credentials
+    token_url: https://keycloak.example.com/realms/myrealm/protocol/openid-connect/token
+    client_id: ${KEYCLOAK_CLIENT_ID}
+    client_secret: ${KEYCLOAK_CLIENT_SECRET}
+    scope: openid profile
+    cache_ttl: 300
+
+  internal_api_key:
+    type: api_key
+    header: X-API-Key
+    value: ${INTERNAL_API_KEY}
+
+  static_token:
+    type: static_bearer
+    token: ${STATIC_TOKEN}
+
+# Route definitions
+routes:
+  - name: squidex-content
+    path_prefix: /cms
+    upstream: http://squidex:5000
+    strip_prefix: true
+    auth: squidex_cms
+    timeout: 30
+    # Optional: rewrite the path
+    rewrite_prefix: /api
+
+  - name: my-api
+    path_prefix: /api
+    upstream: http://my-api:3000
+    strip_prefix: false
+    auth: internal_api_key
+    timeout: 30
+
+  - name: external-service
+    path_prefix: /external
+    upstream: https://external.example.com
+    strip_prefix: true
+    auth: keycloak_api
+    timeout: 60
+
+  - name: public-health
+    path_prefix: /health
+    upstream: http://my-api:3000
+    strip_prefix: true
+    auth: null  # No auth
