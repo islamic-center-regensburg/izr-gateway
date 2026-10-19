@@ -3,7 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: izr-gateway:latest
     container_name: izr-gateway
     ports:
       - "8000:8080"
